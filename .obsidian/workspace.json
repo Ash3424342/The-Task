@@ -1,0 +1,224 @@
+{
+  "main": {
+    "id": "a23654da844578dd",
+    "type": "split",
+    "children": [
+      {
+        "id": "62052f1ed48864f3",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "d46bb9dd23ebfe81",
+            "type": "leaf",
+            "state": {
+              "type": "empty",
+              "state": {},
+              "icon": "lucide-file",
+              "title": "New tab"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "vertical"
+  },
+  "left": {
+    "id": "903e5dec5e07669a",
+    "type": "split",
+    "children": [
+      {
+        "id": "7e6abf8724d0e532",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "122d6b192d13858b",
+            "type": "leaf",
+            "state": {
+              "type": "file-explorer",
+              "state": {
+                "sortOrder": "alphabetical",
+                "autoReveal": false
+              },
+              "icon": "lucide-folder-closed",
+              "title": "Files"
+            }
+          },
+          {
+            "id": "2d801dff2fb82b72",
+            "type": "leaf",
+            "state": {
+              "type": "search",
+              "state": {
+                "query": "",
+                "matchingCase": false,
+                "explainSearch": false,
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical"
+              },
+              "icon": "lucide-search",
+              "title": "Search"
+            }
+          },
+          {
+            "id": "bd883d46612ba306",
+            "type": "leaf",
+            "state": {
+              "type": "bookmarks",
+              "state": {},
+              "icon": "lucide-bookmark",
+              "title": "Bookmarks"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300
+  },
+  "right": {
+    "id": "6abb84316090f560",
+    "type": "split",
+    "children": [
+      {
+        "id": "756e516e67e72050",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "1aab3a06eeac30d5",
+            "type": "leaf",
+            "state": {
+              "type": "backlink",
+              "state": {
+                "file": "SETUP-NOTES.md",
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical",
+                "showSearch": false,
+                "searchQuery": "",
+                "backlinkCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-coming-in",
+              "title": "Backlinks for SETUP-NOTES"
+            }
+          },
+          {
+            "id": "468f52fba1214013",
+            "type": "leaf",
+            "state": {
+              "type": "outgoing-link",
+              "state": {
+                "file": "SETUP-NOTES.md",
+                "linksCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-going-out",
+              "title": "Outgoing links from SETUP-NOTES"
+            }
+          },
+          {
+            "id": "b76d7521d08c18df",
+            "type": "leaf",
+            "state": {
+              "type": "tag",
+              "state": {
+                "sortOrder": "frequency",
+                "useHierarchy": true,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-tags",
+              "title": "Tags"
+            }
+          },
+          {
+            "id": "8f86f6a2928b6028",
+            "type": "leaf",
+            "state": {
+              "type": "all-properties",
+              "state": {
+                "sortOrder": "frequency",
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-archive",
+              "title": "All properties"
+            }
+          },
+          {
+            "id": "67c1bc19df80d133",
+            "type": "leaf",
+            "state": {
+              "type": "outline",
+              "state": {
+                "file": "SETUP-NOTES.md",
+                "followCursor": false,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-list",
+              "title": "Outline of SETUP-NOTES"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300,
+    "collapsed": true
+  },
+  "left-ribbon": {
+    "hiddenItems": {
+      "switcher:Open quick switcher": false,
+      "graph:Open graph view": false,
+      "canvas:Create new canvas": false,
+      "daily-notes:Open today's daily note": false,
+      "templates:Insert template": false,
+      "command-palette:Open command palette": false,
+      "bases:Create new base": false,
+      "templater-obsidian:Templater": false
+    }
+  },
+  "active": "d46bb9dd23ebfe81",
+  "lastOpenFiles": [
+    "SETUP-NOTES.md",
+    "Deliverables/meeting-notes-images.md",
+    "Deliverables/compass-setup-guide.md",
+    "Deliverables/analytics-skills-deep-dive.md",
+    "Deliverables/compass-mcp-product-doc.md",
+    "raw/image-reference/My full task.jpg",
+    "raw/image-reference/Content Engine.jpg",
+    "raw/image-reference",
+    "raw/compass-mcp-docs/Dataplatform · Setup Guide - Coda.pdf",
+    "raw/compass-mcp-docs/Dataplatform · Compass MCP - BETA - Coda.pdf",
+    "raw/compass-mcp-docs/Dataplatform · Analytics Skills Deep Dive - Coda.pdf",
+    "raw/compass-mcp-docs",
+    "HOW-TO-GUIDE.md",
+    "Projects/compass-mcp-skills.md",
+    "Projects/content-engine.md",
+    "Manager/Manager-Dashboard.md",
+    "Manager/Today-Commands.md",
+    "Manager/Execution-Log.md",
+    "Deliverables/task-description-v2.md",
+    "Deliverables/project-plan-v2.md",
+    "Deliverables/implementation-plan-v2.md",
+    "Deliverables/bootstrap-prompt.md",
+    "log.md",
+    "raw/task_description.md",
+    "raw/task_description_v2.md",
+    "raw/project_plan.md",
+    "raw/project_plan_v2.md",
+    "raw/project_plan_v1.md",
+    "raw/implementation_plan.md",
+    "raw/implementation_plan_v2.md",
+    "raw/groww_detailed_project_plan.md",
+    "raw/detailed_project_plan.md",
+    "raw/claude_code_prompt.md",
+    "raw/claude.ai-Scoping a context engine and compass MCP integration.pdf",
+    "raw/claude.ai-Scoping a context engine and compass MCP integration - Claude-fpscreenshot.pdf",
+    "wiki",
+    "_Archive",
+    "Manager"
+  ]
+}

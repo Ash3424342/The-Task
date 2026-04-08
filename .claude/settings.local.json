@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mkdir:*)",
+      "Bash(cp \"/Users/ashishch/Downloads/My task - Groww/Compass MCP/\"* \"/Users/ashishch/Desktop/The Task/raw/compass-mcp-docs/\")",
+      "Bash(cp \"/Users/ashishch/Downloads/My task - Groww/Image Refrence/\"* \"/Users/ashishch/Desktop/The Task/raw/image-reference/\")",
+      "Bash(cp \"/Users/ashishch/Downloads/My task - Groww/What to do/\"* \"/Users/ashishch/Desktop/The Task/raw/\")"
+    ]
+  },
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "groww-creative"
+  ]
+}
