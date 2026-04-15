@@ -42,3 +42,8 @@ execution-log: "2026-04-07: Started with X → verified"
 - Maintain wiki/index.md as a catalog of all wiki pages with one-line descriptions.
 
 Read this file FIRST on every skill activation.
+
+**Available Skills (3-skill system):**
+- `managing-work-context` — The Manager brain. Ingests raw/, extracts tasks, updates vault, generates execution plans. Trigger: "Run Manager Skill", "Manager review", "Manager: ingest [file]"
+- `worker` — The execution hands. Reads vault context, then builds code/docs/skills. Trigger: "Worker: [task]", "work on [task]", "build [thing]"
+- `orchestrate` — Combined Manager + Worker. Plans first, gets approval, then builds and updates vault. Trigger: "Orchestrate: [task]", "plan and build [thing]"

@@ -7,12 +7,14 @@ description: |
 allowed-tools:
   - Read
   - Write
+  - Edit
   - Glob
   - Bash(ls)
   - Bash(mkdir)
   - Bash(mv)
   - TaskCreate
   - TaskGet
+  - TaskUpdate
 context: fork
 ---
 

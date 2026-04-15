@@ -7,6 +7,7 @@ Entity and concept pages for the Second Brain vault.
 - [[NARAD]] — Groww's email/push notification sending platform
 - [[WebEngage]] — Campaign management platform, stores sent emails
 - [[915-Brand]] — Groww's trading sub-brand (dark theme emails)
+- [[Saurabh-Dubey]] — Compass MCP author, Dataplatform team at Groww
 
 ## Reference Documents (Compass MCP Official)
 - [[Deliverables/compass-mcp-product-doc|Compass MCP Product Overview]] — 80+ tools, 9 features, architecture

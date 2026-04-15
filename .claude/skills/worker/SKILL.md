@@ -68,11 +68,12 @@ After completing work:
 ## Key Context References (load as needed)
 - **Content Engine architecture**: `Projects/content-engine.md`
 - **Compass Skills inventory**: `Projects/compass-mcp-skills.md`
-- **Implementation blueprint**: `Deliverables/implementation-plan-v2.md` (has actual code patterns)
-- **Task description**: `Deliverables/task-description-v2.md` (full scope, boundaries, success criteria)
-- **All 16 skills reference**: `Deliverables/analytics-skills-deep-dive.md`
+- **Implementation blueprint (FULL)**: `raw/implementation_plan_v2.md` (54KB — has actual Python code patterns, project structure, component implementations)
+- **Task description (FULL)**: `raw/task_description_v2.md` (42KB — has scope boundaries in Section 9, success criteria in Section 11, open questions in Section 13)
+- **All 16 skills reference**: `Deliverables/analytics-skills-deep-dive.md` (or full version at `raw/compass-mcp-docs/Dataplatform · Analytics Skills Deep Dive - Coda.pdf`)
 - **Compass setup**: `Deliverables/compass-setup-guide.md`
 - **Bootstrap prompt**: `raw/claude_code_bootstrap_prompt.md` (full context in one file)
+- **Deliverable summaries**: `Deliverables/*.md` (short summaries linking to full docs in raw/)
 - **Key corrections**: Content Engine and Compass are PARALLEL systems. 16 skills already exist. Compass is DataHub+Superset+Trino (80+ tools). WBR/MBR is Compass's job, not Content Engine.
 
 ## Behavioral Rules

@@ -4,17 +4,21 @@
     "type": "split",
     "children": [
       {
-        "id": "62052f1ed48864f3",
+        "id": "fb6f90b26bfdeff0",
         "type": "tabs",
         "children": [
           {
-            "id": "d46bb9dd23ebfe81",
+            "id": "20c404e51eb74cdd",
             "type": "leaf",
             "state": {
-              "type": "empty",
-              "state": {},
+              "type": "markdown",
+              "state": {
+                "file": "Deliverables/compass-mcp-product-doc.md",
+                "mode": "source",
+                "source": false
+              },
               "icon": "lucide-file",
-              "title": "New tab"
+              "title": "compass-mcp-product-doc"
             }
           }
         ]
@@ -180,13 +184,27 @@
       "templater-obsidian:Templater": false
     }
   },
-  "active": "d46bb9dd23ebfe81",
+  "active": "20c404e51eb74cdd",
   "lastOpenFiles": [
-    "SETUP-NOTES.md",
+    "wiki/Compass-MCP.md",
+    "wiki/Saurabh-Dubey.md",
+    "AI-Sessions/claude-scoping-content-engine-compass-2026-04-07.md",
+    "Manager/Today-Commands.md",
+    "Manager/Manager-Dashboard.md",
+    "Manager/Execution-Log.md",
+    "Deliverables/task-description-v2.md",
+    "Deliverables/project-plan-v2.md",
     "Deliverables/meeting-notes-images.md",
+    "Deliverables/implementation-plan-v2.md",
     "Deliverables/compass-setup-guide.md",
-    "Deliverables/analytics-skills-deep-dive.md",
     "Deliverables/compass-mcp-product-doc.md",
+    "Deliverables/bootstrap-prompt.md",
+    "Deliverables/analytics-skills-deep-dive.md",
+    "wiki/WebEngage.md",
+    "wiki/Groww.md",
+    "wiki/index.md",
+    "wiki/915-Brand.md",
+    "SETUP-NOTES.md",
     "raw/image-reference/My full task.jpg",
     "raw/image-reference/Content Engine.jpg",
     "raw/image-reference",
@@ -197,24 +215,10 @@
     "HOW-TO-GUIDE.md",
     "Projects/compass-mcp-skills.md",
     "Projects/content-engine.md",
-    "Manager/Manager-Dashboard.md",
-    "Manager/Today-Commands.md",
-    "Manager/Execution-Log.md",
-    "Deliverables/task-description-v2.md",
-    "Deliverables/project-plan-v2.md",
-    "Deliverables/implementation-plan-v2.md",
-    "Deliverables/bootstrap-prompt.md",
     "log.md",
     "raw/task_description.md",
     "raw/task_description_v2.md",
     "raw/project_plan.md",
-    "raw/project_plan_v2.md",
-    "raw/project_plan_v1.md",
-    "raw/implementation_plan.md",
-    "raw/implementation_plan_v2.md",
-    "raw/groww_detailed_project_plan.md",
-    "raw/detailed_project_plan.md",
-    "raw/claude_code_prompt.md",
     "raw/claude.ai-Scoping a context engine and compass MCP integration.pdf",
     "raw/claude.ai-Scoping a context engine and compass MCP integration - Claude-fpscreenshot.pdf",
     "wiki",

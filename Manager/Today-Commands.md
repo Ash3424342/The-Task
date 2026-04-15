@@ -43,3 +43,6 @@ Output: JSON recipe format per email
 ## Completed
 - [x] Initial vault setup
 - [x] Scoping session ingested (2 PDFs → AI session + 2 projects + 5 tasks + 5 wiki pages)
+- [x] Planning docs ingested (11 files → 4 deliverable notes)
+- [x] Compass MCP official docs ingested (3 PDFs + 2 images → 4 deliverable notes, enriched wiki)
+- [x] Vault audit — 10 holes found and fixed

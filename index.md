@@ -13,7 +13,15 @@
 
 ## Active Tasks
 
-### Content Engine
+### Compass MCP Skills (Primary)
+| Task | Status | Priority | Due |
+|---|---|---|---|
+| [[Tasks/CMP-1-engagement-comms-skill|Engagement & Comms Skill]] | todo | high | 2026-04-14 |
+| [[Tasks/CMP-2-context-push-skill|Context Push Skill]] | todo | high | 2026-04-18 |
+| [[Tasks/CMP-3-financial-health-skill|Financial Health Skill]] | todo | high | 2026-04-22 |
+| [[Tasks/CMP-4-mf-extended-skill|MF Extended Skill]] | todo | high | 2026-04-25 |
+
+### Content Engine (Side Project)
 | Task | Status | Priority | Due |
 |---|---|---|---|
 | [[Tasks/CE-1-email-analyzer|Email Analyzer Pipeline]] | todo | medium | 2026-04-14 |
@@ -21,12 +29,7 @@
 | [[Tasks/CE-3-chart-renderer|Chart Image Renderer]] | todo | medium | 2026-04-18 |
 | [[Tasks/CE-4-mcp-server|Content Engine MCP Server]] | todo | medium | 2026-04-21 |
 
-### Compass MCP Skills
-| Task | Status | Priority | Due |
-|---|---|---|---|
-| [[Tasks/CMP-1-engagement-comms-skill|Engagement & Comms Skill]] | todo | high | 2026-04-14 |
-
-## Deliverables (Completed)
+## Deliverables (Completed Planning Docs)
 - [[Deliverables/task-description-v2|Task Description v2]] — Full project spec (42KB)
 - [[Deliverables/project-plan-v2|Project Plan v2]] — Phased plan with skill inventory (20KB)
 - [[Deliverables/implementation-plan-v2|Implementation Plan v2]] — Technical blueprint with code (54KB)
@@ -39,7 +42,7 @@
 ## AI Sessions
 - [[AI-Sessions/claude-scoping-content-engine-compass-2026-04-07|Scoping Session: Content Engine & Compass MCP]] (2026-04-07)
 
-## Raw Sources (15 files)
+## Raw Sources (18 files)
 ### Session Transcripts
 - claude.ai-Scoping a context engine and compass MCP integration.pdf (text, 22 pages)
 - claude.ai-Scoping a context engine and compass MCP integration - Claude-fpscreenshot.pdf (screenshots, 10 pages)
@@ -52,9 +55,19 @@
 - claude_code_bootstrap_prompt.md / claude_code_prompt.md
 - detailed_project_plan.md (placeholder)
 
+### Compass MCP Official Docs
+- compass-mcp-docs/Dataplatform · Analytics Skills Deep Dive - Coda.pdf (18 pages)
+- compass-mcp-docs/Dataplatform · Compass MCP - BETA - Coda.pdf (14 pages)
+- compass-mcp-docs/Dataplatform · Setup Guide - Coda.pdf (5 pages)
+
+### Image References
+- image-reference/Content Engine.jpg (handwritten meeting notes — CM flow)
+- image-reference/My full task.jpg (handwritten meeting notes — full pipeline)
+
 ## Wiki
 - [[wiki/Groww|Groww]] — Indian fintech platform (117M users)
 - [[wiki/Compass-MCP|Compass MCP]] — Central data platform MCP (80+ tools)
 - [[wiki/NARAD|NARAD]] — Email/push sending platform (250M push/day)
 - [[wiki/WebEngage|WebEngage]] — Campaign management (~150 emails/month)
 - [[wiki/915-Brand|915]] — Trading sub-brand
+- [[wiki/Saurabh-Dubey|Saurabh Dubey]] — Compass MCP author, Dataplatform team
