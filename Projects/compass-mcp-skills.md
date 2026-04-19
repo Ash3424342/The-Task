@@ -62,7 +62,7 @@ Each skill document includes:
 | 10 | Commodities | Medium | ⬜ todo | No partition on `commodity_order_master` |
 | 11 | 915 Trading | Medium | ⬜ todo | Data starts June 2025 |
 | 12 | Help & Support | Medium | ⬜ todo | 1 BROKEN table, 2 stale |
-| 13 | Context Push | **Minimal** | ⬜ todo | Major enhancement opportunity |
+| 13 | Context Push | **Minimal** | **⚠️ blocked — Trino access denied** | Catalog-quality spec done; 4 tables found (cep/dashboards_bgv/ds_user_data schemas); Trino access request filed |
 | 14 | User Financial Health | **Minimal** | ⬜ todo | Major enhancement opportunity |
 | 15 | Datahub Navigation | **Minimal** | ⬜ todo | Meta-skill, may not need deep enhancement |
 | 16 | MF Extended | **Minimal** | ⬜ todo | Major enhancement opportunity |
@@ -84,12 +84,15 @@ Each skill document includes:
 1 skill every 2-3 days once rolling
 
 ## Critical Data Guardrails (Apply to ALL Skills)
-- Universal join key: `user_account_id` (format `ACC<digits>`)
+- Universal join key: `user_account_id` (format `ACC<digits>`) — but **NOT actually universal**: PN/WA tables use `useraccountid` (no underscore); session/DAU/DND tables use `cuid` (UUID format, requires user master cross-ref)
+- **Future-date defensive filter**: any time-series engagement table may carry future-dated or sentinel-value rows. Always bound: `WHERE <date_col> <= current_date`. Confirmed cases: `engagement_sms_backend_master` (event_date to 2026-05-01), `engagement_dnd_fact` (date to 2038-01-18 Unix int32 sentinel), `fno_order_master.pt` (to 2090).
 - Pinot events are SAMPLED — must use `boosting_factor`, last 1-2 days broken
-- `engagement_session_indepth` = 57B rows — SINGLE DAY queries only
-- `fno_order_master` has future dates to 2090 — must cap
+- `engagement_session_indepth` = 58.1B rows total / **60M rows/day** — SINGLE DAY queries only
+- `engagement_app_fact` = 16.2B rows — `MAX(week)` scan times out; always partition-filter with known Sunday date (e.g., `week = DATE '2026-04-13'`)
 - Trino safety: read-only, partition enforcement, 600s timeout, 5000 row limit
+- Trino syntax: use `current_date - interval '1' day` (NOT `current_date - 1`); use `SUBSTR(str, LENGTH(str)-n+1)` (no `RIGHT()`)
 - **NEVER use**: `stocks_order` (stale Oct 2025), `invest_user_fid_info` (stale Jun 2024), `hns_freshchat_tickets_master_trino` (BROKEN), `mtf_transactions_v2` (stale Nov 2024)
+- For user-master joins, prefer `growth_user_master_ultimate` (114 cols, has `dim_user_status` pre-built TTU/NTU/SignUp) over bare `growth_user_master`
 
 ## Compass Setup
 - Proxy on port 3100, VPN required

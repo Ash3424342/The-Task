@@ -1,6 +1,6 @@
 ---
 title: "Build Context Push Analytics Skill"
-status: todo
+status: in-progress
 priority: high
 owner: me
 due: 2026-04-18
@@ -9,7 +9,8 @@ sources: "[[raw/compass-mcp-docs/Dataplatform · Analytics Skills Deep Dive - Co
 ai-context: "[[AI-Sessions/claude-scoping-content-engine-compass-2026-04-07]]"
 task-id: "CMP-2"
 project: "[[Projects/compass-mcp-skills]]"
-execution-log: "2026-04-07: Task created from audit — Tier 1 priority, currently minimal/summary only"
+execution-log: "2026-04-07: Task created — Tier 1 priority, minimal stub. | 2026-04-19: Prompt 1 (discovery) complete — found 4 tables across cep/dashboards_bgv/ds_user_data schemas. | 2026-04-19: Prompt 2 (validation) blocked — ALL 4 tables are Trino-access-denied. MCP token has core_bgv access only. Shipping catalog-quality spec; Trino access request filed."
+blocked-by: "Trino access to platform_iceberg.cep, platform_iceberg.dashboards_bgv, platform_iceberg.ds_user_data schemas"
 ---
 
 # Build Context Push Analytics Skill

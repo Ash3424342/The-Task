@@ -337,9 +337,201 @@ CMP-2 is **done** when:
 - [ ] `engagement_comms_attribution.msg_id ↔ engagement_pn_narad_master.msg_id` join confirmed
 - [ ] Campaign instance ID mystery resolved (what table has instanceId = 84316 etc.)
 - [ ] CMAB user_id column format confirmed (ACC... or UUID)
-- [ ] 10+ tested SQL examples for 2 hero tables
+- [x] All confirmed tables discovered with schema, rows, freshness (✅ catalog-quality via DataHub)
+- [~] SQL examples — see §11 (theoretical for restricted tables; working alternatives via core_bgv)
+- [ ] Trino access grant needed: request access to `cep`, `dashboards_bgv`, `ds_user_data` schemas
 - [ ] Wiki `compass-analytics-skills.md` Skill #13 updated
-- [ ] Project doc row 13 updated to ✅ done
+- [ ] Project doc row 13 updated
+
+---
+
+## 11. SQL examples — catalog-quality (2026-04-19) [UNVERIFIED — Trino access denied]
+
+> **Access status:** `cep`, `dashboards_bgv`, `ds_user_data` schemas are Trino-restricted. Queries below are schema-confirmed (columns/types verified via DataHub) but **cannot be run** via the standard MCP Trino token. They will work once elevated access is granted.
+>
+> **Workaround:** The final 2 queries use only `core_bgv` tables (fully accessible) and approximate the same answers via `comm_session` in `engagement_session_indepth`.
+
+---
+
+### cep.campaign_info — 5 queries (schema-confirmed, Trino-restricted)
+
+```sql
+-- Q1: All live campaigns with their product and category
+-- ⚠️ REQUIRES cep schema access
+SELECT campaignid, name, campaigntype, campaigncategory,
+       productentity, state, notificationdeliverypriority,
+       isapproved, current, version
+FROM platform_iceberg.cep.campaign_info
+WHERE current = true
+  AND state = 'LIVE'
+ORDER BY campaignid DESC
+LIMIT 50;
+
+-- Q2: Campaign by product entity and type (what's running today)
+-- ⚠️ REQUIRES cep schema access
+SELECT productentity, campaigntype, campaigncategory,
+       COUNT(*) AS campaign_count
+FROM platform_iceberg.cep.campaign_info
+WHERE current = true
+  AND state = 'LIVE'
+GROUP BY productentity, campaigntype, campaigncategory
+ORDER BY campaign_count DESC;
+
+-- Q3: Look up campaign metadata for a known campaign_id from PN narad
+-- ⚠️ REQUIRES cep schema access
+SELECT campaignid, name, campaigncategory, productentity,
+       state, notificationdeliverypriority,
+       createdat._date AS created_epoch_ms,
+       lastliveat._date AS last_live_epoch_ms
+FROM platform_iceberg.cep.campaign_info
+WHERE current = true
+  AND campaignid = 37401;
+-- Note: campaignid is bigint here; in PN narad it's varchar '37401'
+
+-- Q4: Campaigns recently approved (last 7 days)
+-- ⚠️ REQUIRES cep schema access
+SELECT campaignid, name, productentity, campaigntype, state,
+       lastapprovedat._date AS approved_epoch_ms
+FROM platform_iceberg.cep.campaign_info
+WHERE current = true
+  AND lastapprovedat._date > (CAST(current_date - interval '7' day AS timestamp) - TIMESTAMP '1970-01-01 00:00:00') * 1000
+ORDER BY lastapprovedat._date DESC
+LIMIT 20;
+
+-- Q5: Join campaign config to delivery events (requires both schemas)
+-- ⚠️ REQUIRES BOTH cep AND core_bgv access
+SELECT ci.name AS campaign_name, ci.campaigncategory, ci.productentity,
+       SUM(CASE WHEN pn.status = 'SENT' THEN 1 ELSE 0 END) AS sent,
+       SUM(CASE WHEN pn.click_time IS NOT NULL THEN 1 ELSE 0 END) AS clicked,
+       ROUND(SUM(CASE WHEN pn.click_time IS NOT NULL THEN 1 ELSE 0 END) * 100.0
+             / NULLIF(SUM(CASE WHEN pn.status = 'SENT' THEN 1 ELSE 0 END), 0), 3) AS ctr_pct
+FROM platform_iceberg.cep.campaign_info ci
+JOIN platform_iceberg.core_bgv.engagement_pn_narad_master pn
+  ON CAST(ci.campaignid AS varchar) = pn.campaignid
+WHERE ci.current = true
+  AND pn.event_date = current_date - interval '1' day
+GROUP BY ci.name, ci.campaigncategory, ci.productentity
+ORDER BY sent DESC
+LIMIT 20;
+```
+
+---
+
+### dashboards_bgv.engagement_comms_attribution — 5 queries (schema-confirmed, Trino-restricted)
+
+```sql
+-- Q1: PN attribution rate — what % of sent PNs drove a session?
+-- ⚠️ REQUIRES dashboards_bgv schema access
+SELECT source, campaign_type,
+       COUNT(DISTINCT msg_id) AS attributed_msgs,
+       COUNT(DISTINCT cuid) AS attributed_users
+FROM platform_iceberg.dashboards_bgv.engagement_comms_attribution
+WHERE session_date = current_date - interval '1' day
+GROUP BY source, campaign_type
+ORDER BY attributed_msgs DESC
+LIMIT 20;
+
+-- Q2: Attribution within N minutes of PN send — (join comms_attribution to PN narad)
+-- ⚠️ REQUIRES dashboards_bgv AND core_bgv access
+SELECT pn.campaign_name, pn.campaign_tag,
+       COUNT(DISTINCT attr.cuid) AS attributed_users,
+       COUNT(DISTINCT attr.suid) AS attributed_sessions
+FROM platform_iceberg.dashboards_bgv.engagement_comms_attribution attr
+JOIN platform_iceberg.core_bgv.engagement_pn_narad_master pn
+  ON attr.msg_id = pn.msg_id
+WHERE attr.session_date = current_date - interval '1' day
+  AND pn.event_date = current_date - interval '1' day
+GROUP BY pn.campaign_name, pn.campaign_tag
+ORDER BY attributed_sessions DESC
+LIMIT 20;
+
+-- Q3: Session events triggered by communications (what users do after clicking PN)
+-- ⚠️ REQUIRES dashboards_bgv schema access
+SELECT event_name, source, COUNT(*) AS attributed_sessions
+FROM platform_iceberg.dashboards_bgv.engagement_comms_attribution
+WHERE session_date = current_date - interval '1' day
+GROUP BY event_name, source
+ORDER BY attributed_sessions DESC
+LIMIT 20;
+
+-- Q4: Attribution trend over 7 days
+-- ⚠️ REQUIRES dashboards_bgv schema access
+SELECT session_date, source,
+       COUNT(DISTINCT msg_id) AS attributed_msgs,
+       COUNT(DISTINCT cuid) AS unique_users
+FROM platform_iceberg.dashboards_bgv.engagement_comms_attribution
+WHERE session_date BETWEEN current_date - interval '7' day AND current_date - interval '1' day
+GROUP BY session_date, source
+ORDER BY session_date, attributed_msgs DESC;
+
+-- Q5: Top campaigns by attribution (sessions driven by each campaign)
+-- ⚠️ REQUIRES dashboards_bgv schema access
+SELECT campaign_tag, campaign_type,
+       COUNT(DISTINCT cuid) AS unique_attributed_users,
+       COUNT(*) AS total_attributed_sessions
+FROM platform_iceberg.dashboards_bgv.engagement_comms_attribution
+WHERE session_date = current_date - interval '1' day
+GROUP BY campaign_tag, campaign_type
+ORDER BY unique_attributed_users DESC
+LIMIT 20;
+```
+
+---
+
+### Working alternatives via core_bgv (fully accessible ✅)
+
+These queries use `engagement_session_indepth.comm_session` to approximate attribution analytics without needing `dashboards_bgv` access.
+
+```sql
+-- ALT-1: Sessions attributed to any PN campaign (from comm_session column)
+-- ✅ RUNS — uses core_bgv only; confirms trigger lineage
+SELECT COUNT(*) AS pn_attributed_sessions,
+       COUNT(DISTINCT cuid) AS unique_attributed_users
+FROM platform_iceberg.core_bgv.engagement_session_indepth
+WHERE session_date = current_date - interval '1' day
+  AND comm_session IS NOT NULL
+  AND comm_session LIKE 'CEP-%';
+-- comm_session format: CEP-{instanceId}-{bucket}-CAMPAIGN-PRODUCTION-{userId}-{counter}
+
+-- ALT-2: Extract campaign instance ID from comm_session and join to PN campaign name
+-- ✅ RUNS — parses CEP attribution from comm_session
+SELECT SUBSTR(comm_session, 5, STRPOS(comm_session, '-', 5) - 5) AS campaign_instance_id,
+       COUNT(*) AS attributed_sessions,
+       COUNT(DISTINCT cuid) AS unique_users
+FROM platform_iceberg.core_bgv.engagement_session_indepth
+WHERE session_date = current_date - interval '1' day
+  AND comm_session LIKE 'CEP-%'
+GROUP BY SUBSTR(comm_session, 5, STRPOS(comm_session, '-', 5) - 5)
+ORDER BY attributed_sessions DESC
+LIMIT 20;
+
+-- ALT-3: Top campaigns by PN volume (accessible proxy for cep.campaign_info)
+-- ✅ RUNS — uses core_bgv only
+SELECT campaignid, campaign_name, campaign_tag, productentity,
+       COUNT(*) AS total_attempts,
+       SUM(CASE WHEN status = 'SENT' THEN 1 ELSE 0 END) AS sent,
+       SUM(CASE WHEN click_time IS NOT NULL THEN 1 ELSE 0 END) AS clicked,
+       ROUND(SUM(CASE WHEN click_time IS NOT NULL THEN 1 ELSE 0 END) * 100.0
+             / NULLIF(SUM(CASE WHEN status = 'SENT' THEN 1 ELSE 0 END), 0), 3) AS ctr_pct
+FROM platform_iceberg.core_bgv.engagement_pn_narad_master
+WHERE event_date = current_date - interval '1' day
+GROUP BY campaignid, campaign_name, campaign_tag, productentity
+ORDER BY sent DESC LIMIT 20;
+```
+
+---
+
+### Access request (action item)
+
+**Request Trino access for:** `platform_iceberg.cep`, `platform_iceberg.dashboards_bgv`, `platform_iceberg.ds_user_data`
+
+**Requester:** MCP Trino token (the token used by the Compass MCP server on port 3100)
+
+**Reason:** CMP-2 Context Push Analytics skill build requires sample queries and enum validation on CEP campaign tables. Current token has `core_bgv` access only.
+
+**Contact:** Data Platform team (Saurabh Dubey per wiki) — whoever manages Trino row-level/schema-level ACLs.
+
+Once granted: re-run Prompts 2 + 3 from `Manager/CMP-2-Compass-Prompts.md` to complete live validation.
 
 ---
 
