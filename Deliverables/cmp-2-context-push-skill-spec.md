@@ -231,7 +231,103 @@ The `CEP-{campaignInstanceId}-{bucket}-CAMPAIGN-PRODUCTION-{userId}-{counter}` f
 
 ---
 
-## 8. Acceptance criteria
+## 10. Prompt 2 results — Sample data + enum validation [UNVERIFIED, 2026-04-19]
+
+*All queries attempted via live Compass MCP Trino. Date: 2026-04-19.*
+
+---
+
+### §10.1 Section 1: Per-table samples + enum values
+
+**CRITICAL FINDING: All 4 CMP-2 tables are Trino-access-denied.**
+
+| Table | Trino access | Error |
+|---|---|---|
+| `platform_iceberg.cep.campaign_info` | ❌ DENIED | `Access Denied: Cannot select from table platform_iceberg.cep.campaign_info` |
+| `platform_iceberg.dashboards_bgv.engagement_comms_attribution` | ❌ DENIED | `Access Denied: Cannot select from table platform_iceberg.dashboards_bgv.engagement_comms_attribution` |
+| `platform_iceberg.ds_user_data.cmab_user_store_v3` | ❌ DENIED | `Access Denied: Cannot select from table platform_iceberg.ds_user_data.cmab_user_store_v3` |
+| `platform_iceberg.ds_user_data.cmab_interaction_logs` | ❌ DENIED | `Access Denied: Cannot select from table platform_iceberg.ds_user_data.cmab_interaction_logs` |
+
+**Contrast with CMP-1:** All `platform_iceberg.core_bgv.*` tables (9 engagement tables) were freely queryable via this MCP token. CMP-2 tables span three different schemas (`cep`, `dashboards_bgv`, `ds_user_data`) that have elevated access controls. The MCP Trino token has read access to `core_bgv` but not to these schemas.
+
+**Implication for skill:** SQL examples for CMP-2 tables are **theoretical** — they cannot be live-run and confirmed by standard analytics users via this Trino connection. The skill must document this access requirement explicitly.
+
+---
+
+### §10.2 Section 2: Future-date check
+
+Not executable via Trino (access denied). From catalog metadata:
+
+| Table | Partition col | Last snapshot | Status |
+|---|---|---|---|
+| `cep.campaign_info` | unknown (100 partitions) | 2026-04-18 12:31 | ✅ fresh — no future-date concern (it's a config table, not event-based) |
+| `dashboards_bgv.engagement_comms_attribution` | `session_date` | 2026-04-18 04:24 | ✅ fresh |
+| `ds_user_data.cmab_user_store_v3` | none (COR) | 2026-02-26 | ⚠️ 52 days old |
+| `ds_user_data.cmab_interaction_logs` | none (COR) | 2025-12-01 | ⚠️ 139 days old |
+
+---
+
+### §10.3 Section 3: Trigger lineage (confirmed via PN narad)
+
+`platform_iceberg.core_bgv.engagement_pn_narad_master` IS accessible. Using it as a proxy:
+
+```sql
+SELECT campaignid, campaign_name, campaign_tag, productentity,
+       COUNT(*) AS pn_attempts
+FROM platform_iceberg.core_bgv.engagement_pn_narad_master
+WHERE event_date = current_date - interval '1' day
+GROUP BY campaignid, campaign_name, campaign_tag, productentity
+ORDER BY pn_attempts DESC LIMIT 10
+```
+
+**✅ Confirmed:** `campaignid` in PN narad is **varchar** (e.g., "33982", "37401"). Top campaigns:
+
+| campaignid | campaign_name | campaign_tag | productentity | pn_attempts |
+|---|---|---|---|---|
+| "33982" | 03 Oct'25 - Credit - RPL - Low Freq. Targeting - Megh | credit - teleport - rpl - low freq | Personal Loans | 8,839,349 |
+| "37401" | 17Apr'26 - Stock - Signup - Educational | stocks educational | Stocks | 7,919,378 |
+| "36624" | Credit - Teleport - PA, MLR, Repeat - No Credit comms. received L7D | credit - teleport - pa - comms not received | Personal Loans | 6,442,174 |
+| "37400" | 17Apr'26 - Stock - NTU PA & Onb - Educational | stocks educational | Stocks | 5,569,546 |
+| "32375" | MF - NTU PA - Value props | mf value prop | MF | 4,929,207 |
+
+**Join formula confirmed:** `CAST(ci.campaignid AS varchar) = pn.campaignid` — bigint in `cep.campaign_info` to varchar in PN narad. No direct Trino join tested (access denied on CEP side), but the mapping is structurally sound.
+
+**Campaign tag taxonomy observed from PN narad:**
+- `credit - teleport - *` — Credit/personal loans campaigns
+- `stocks educational` — Educational stock content
+- `f&o educational` — F&O educational  
+- `mf value prop` — MF value proposition
+- `groww_amc_*` — AMC/NFO campaigns
+- `stocks opening bell`, `pers - price alert - *` — DMA/personalized stock alerts
+
+---
+
+### §10.4 Section 4: New guardrails discovered (Prompt 2)
+
+| ID | Table | Guardrail |
+|---|---|---|
+| G1 | All CMP-2 tables | **Schema-level Trino access restriction.** `cep`, `dashboards_bgv`, `ds_user_data` schemas require elevated permissions not available via standard MCP token. SQL examples in the skill are catalog-confirmed but Trino-unrunnable for standard users. |
+| G2 | `cep.campaign_info` | **Type mismatch on join:** `cep.campaign_info.campaignid` = bigint; `engagement_pn_narad_master.campaignid` = varchar. Always use `CAST(ci.campaignid AS varchar) = pn.campaignid`. |
+| G3 | `cep.campaign_info` | **MongoDB CDC source** (Kafka: `mongo-db-campaign-service-v4`) — table is a CDC dump, not a traditional analytics table. Updates are incremental (change events), not daily batch. The `current = true` filter is mandatory to get latest version of each campaign. |
+| G4 | `cep.campaign_info` | **Nested struct timestamps:** `createdat`, `modifiedat`, `lastliveat` etc. are `row(_date bigint)` — the epoch ms is at `createdat._date`, not directly at the column. Use: `createdat._date` to access. |
+| G5 | `ds_user_data.cmab_user_store_v3` | **Stale (52 days).** Last refresh Feb 2026. Not suitable for daily analytics. Use as reference/ML feature store, not current state. |
+| G6 | `ds_user_data.cmab_interaction_logs` | **Very stale (139 days).** Last refresh Dec 2025. May be superseded by a newer CMAB logging table. |
+| G7 | All CMP-2 hero tables | **CMP-2 is catalog-only** — schemas confirmed via DataHub (list_schema_fields), but live Trino validation impossible without elevated access. Skill documentation is schema-accurate but SQL examples cannot be verified as runnable by standard analytics users. |
+
+---
+
+### §10.5 Resolution path
+
+Since Trino access is denied, the CMP-2 skill can still be built at **catalog quality** (not Trino-confirmed quality):
+
+1. **Schemas:** Confirmed via `list_schema_fields` ✅
+2. **Row counts + freshness:** Confirmed via DataHub `datasetProperties` ✅  
+3. **Campaign linkage:** Confirmed via PN narad proxy ✅
+4. **Sample data / enums / SQL tests:** ❌ not possible without access grant
+
+**Recommended path forward:** Request Trino access to `cep`, `dashboards_bgv`, and `ds_user_data` schemas. Document the access request in the task. Meanwhile, write the skill at catalog quality — it will still be useful for LLM context even without live SQL examples.
+
+**Alternative:** Check if `core_bgv` has any derived views or summary tables from CEP/attribution data that are accessible. The `comms_attribution` data from session_indepth's `comm_session` column is in `core_bgv` and IS accessible — this can serve as a partial substitute.
 
 CMP-2 is **done** when:
 
