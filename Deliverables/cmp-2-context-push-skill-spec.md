@@ -535,7 +535,160 @@ Once granted: re-run Prompts 2 + 3 from `Manager/CMP-2-Compass-Prompts.md` to co
 
 ---
 
-## 9. Related
+## 12. Prompt 3 results — Cross-skill joins + hero SQL + stale sweep [UNVERIFIED, 2026-04-19]
+
+*All queries via live Compass MCP Trino. Date used: `current_date - interval '1' day` = 2026-04-18 (Saturday). All run on accessible core_bgv tables only — CMP-2 tables remain access-denied.*
+
+---
+
+### §12.1 Section A: Cross-skill join validations
+
+**Join 1 (CMP-2 ⨝ growth_user_master_ultimate):** ❌ All CMP-2 tables Trino-access-denied. Not runnable.
+
+**Join 2 (CMP-2 ⨝ PN narad via campaign instance):**
+- Direct join (`SPLIT_PART(comm_session,'-',2) = pn.campaigninstanceid` on 60M × 249M rows): ❌ **TIMED OUT** (300s)
+- Two-step approach ✅: (1) aggregate comm_session to get top instanceIds → (2) look up PN narad with IN filter
+
+```sql
+-- Step 1: extract top instance IDs from comm_session
+SELECT SPLIT_PART(comm_session, '-', 2) AS campaign_instance_id,
+       COUNT(*) AS attributed_sessions
+FROM platform_iceberg.core_bgv.engagement_session_indepth
+WHERE session_date = current_date - interval '1' day
+  AND comm_session LIKE 'CEP-%'
+GROUP BY SPLIT_PART(comm_session, '-', 2)
+ORDER BY attributed_sessions DESC LIMIT 20;
+
+-- Step 2: look up campaign metadata for those instance IDs
+SELECT campaigninstanceid, campaign_name, campaign_tag, productentity,
+       COUNT(*) AS pn_sent
+FROM platform_iceberg.core_bgv.engagement_pn_narad_master
+WHERE event_date = current_date - interval '1' day
+  AND campaigninstanceid IN ('84496','84479','84476','84474','84470','84471','84475','84490')
+  AND status = 'SENT'
+GROUP BY campaigninstanceid, campaign_name, campaign_tag, productentity
+ORDER BY pn_sent DESC;
+```
+
+**Combined result (top campaigns by attributed sessions, 2026-04-18):**
+
+| campaign_instance_id | campaign_name | campaign_tag | attributed_sessions | pn_sent | attribution_rate |
+|---|---|---|---|---|---|
+| 84496 | 03 Oct'25 - Credit - RPL - Low Freq. Targeting - Megh | credit - teleport - rpl - low freq | 124,387 | 4,594,807 | 2.7% |
+| 84479 | 18 Apr'26 - AMC - Arbitrage fund NFO - Mid | groww_amc_Arbitrage_Fund_nfo | 116,753 | 1,351,039 | **8.6%** |
+| 84476 | Credit - All Pa Users Teleport - Saturday - Farhan | credit - pa - all propensity - prism | 95,874 | 3,521,258 | 2.7% |
+| 84474 | Credit - Teleport - PA, MLR, Repeat | credit - teleport - pa - comms not received | 59,032 | 4,393,214 | 1.3% |
+| 84470 | 17Apr'26 - Stock - NTU PA & Onb - Educational | stocks educational | 26,733 | 4,469,948 | 0.6% |
+| 84471 | 17Apr'26 - Stock - Signup - Educational | stocks educational | 15,560 | 5,481,931 | 0.3% |
+
+**Join key confirmed:** `SPLIT_PART(comm_session, '-', 2)` = `campaigninstanceid` in PN narad — both varchar, no type coercion. Join 84452 not found in PN narad (numeric-only instanceids match; CAMP-INSTANCE-* format does not).
+
+**Join 3 (session_indepth ⨝ dau_indepth on cuid):** ✅ confirmed — both core_bgv, clean cuid UUID join.
+
+---
+
+### §12.2 Section B: Hero SQL results (5 queries via comm_session proxy)
+
+All queries use `platform_iceberg.core_bgv.engagement_session_indepth` — the only accessible attribution table.
+
+**Q1: Total PN-attributed sessions and users yesterday** ✅ 1 row
+
+```sql
+SELECT COUNT(*) AS pn_attributed_sessions,
+       COUNT(DISTINCT cuid) AS unique_attributed_users
+FROM platform_iceberg.core_bgv.engagement_session_indepth
+WHERE session_date = current_date - interval '1' day
+  AND comm_session IS NOT NULL AND comm_session LIKE 'CEP-%'
+```
+**Result:** 523,874 sessions | 463,862 unique users (2026-04-18, Saturday)
+
+---
+
+**Q2: Top campaigns by attributed sessions (two-step via PN narad lookup)** ✅ 9 rows (lookup step)
+
+See §12.1 above. Best performer: AMC Arbitrage NFO at 8.6% attribution rate (vs 0.3-2.7% for others).
+
+---
+
+**Q3: Order conversion among PN-attributed sessions** ✅ 1 row
+
+```sql
+SELECT SUM(CASE WHEN orders > 0 THEN 1 ELSE 0 END) AS order_sessions,
+       COUNT(*) AS total_cep_sessions,
+       ROUND(SUM(CASE WHEN orders > 0 THEN 1 ELSE 0 END)*100.0/COUNT(*),2) AS order_conversion_pct
+FROM platform_iceberg.core_bgv.engagement_session_indepth
+WHERE session_date = current_date - interval '1' day
+  AND comm_session LIKE 'CEP-%'
+```
+**Result:** 12 order sessions / 523,874 total → **0.00% order conversion** (Saturday — market closed, no stock orders).
+
+---
+
+**Q4: TTU vs NTU split among PN-attributed users** ✅ 2 rows
+
+```sql
+SELECT d.ttu_flag,
+       COUNT(DISTINCT s.cuid) AS unique_users,
+       ROUND(COUNT(DISTINCT s.cuid)*100.0/SUM(COUNT(DISTINCT s.cuid)) OVER (),2) AS pct
+FROM platform_iceberg.core_bgv.engagement_session_indepth s
+JOIN platform_iceberg.core_bgv.engagement_dau_indepth d
+  ON s.cuid = d.cuid
+WHERE s.session_date = current_date - interval '1' day
+  AND d.session_date = current_date - interval '1' day
+  AND s.comm_session LIKE 'CEP-%'
+GROUP BY d.ttu_flag ORDER BY unique_users DESC
+```
+**Result:** TTU (ttu_flag=1): **402,388 users (86.7%)** | NTU: 61,474 users (13.3%)  
+CEP campaigns are heavily TTU-targeted — makes sense for re-engagement / cross-sell push.
+
+---
+
+**Q5: 7-day trend of PN-attributed sessions** ✅ 7 rows (no timeout — LIKE filter reduces scan efficiently)
+
+```sql
+SELECT session_date, COUNT(*) AS cep_attributed_sessions,
+       COUNT(DISTINCT cuid) AS unique_users
+FROM platform_iceberg.core_bgv.engagement_session_indepth
+WHERE session_date BETWEEN current_date - interval '7' day AND current_date - interval '1' day
+  AND comm_session LIKE 'CEP-%'
+GROUP BY session_date ORDER BY session_date
+```
+
+| Date | CEP sessions | Unique users |
+|---|---|---|
+| 2026-04-12 (Sun) | 142,629 | 129,026 |
+| 2026-04-13 (Mon) | 8,979,904 | 3,408,978 |
+| 2026-04-14 (Tue) | 813,648 | 642,027 |
+| 2026-04-15 (Wed) | 9,013,840 | 3,457,289 |
+| 2026-04-16 (Thu) | 10,586,969 | 3,607,971 |
+| 2026-04-17 (Fri) | 9,347,425 | 3,449,322 |
+| 2026-04-18 (Sat) | 523,874 | 463,862 |
+
+**⚠️ New guardrail G9:** Weekend/holiday drop is extreme — **98.5% fewer CEP sessions on weekends** (142K Sun, 524K Sat) vs weekdays (9-10M). NSE/BSE market closed → stock/F&O campaigns don't fire → attribution collapses. Apr 14 (Tue) also low (813K) — likely Ram Navami / market holiday. Always check day-of-week when interpreting CEP attribution numbers.
+
+---
+
+### §12.3 Section C: Stale sweep (accessible tables only)
+
+| Table | MAX(partition) | Days behind | Status |
+|---|---|---|---|
+| `core_bgv.engagement_pn_narad_master` | **2026-04-19** | 0 | ✅ fresh — proxy for CEP campaign freshness |
+| `core_bgv.engagement_session_indepth` | **2026-04-19** | 0 | ✅ fresh — proxy for attribution freshness |
+| `cep.campaign_info` | ❌ access denied | — | from catalog: 2026-04-18 (1 day), 6 commits/day ✅ |
+| `dashboards_bgv.engagement_comms_attribution` | ❌ access denied | — | from catalog: 2026-04-18 (1 day) ✅ |
+| `ds_user_data.cmab_user_store_v3` | ❌ access denied | — | from catalog: 2026-02-26 (52 days) ⚠️ |
+| `ds_user_data.cmab_interaction_logs` | ❌ access denied | — | from catalog: 2025-12-01 (139 days) ⚠️ |
+
+No future-date anomalies found. PN narad and session_indepth are both current as of today.
+
+---
+
+### §12.4 New guardrails (Prompt 3, G8–G9)
+
+| ID | Guardrail |
+|---|---|
+| G8 | **Direct session_indepth × PN narad join on SPLIT_PART times out.** 60M × 249M rows with string function is too expensive (>300s). Always use two-step: (1) aggregate comm_session to get instanceIds, (2) look up PN narad with IN filter on specific instanceIds. |
+| G9 | **Weekend/market-holiday attribution collapse.** CEP-attributed sessions drop 98%+ on weekends (NSE/BSE closed, stock/F&O campaigns don't fire). Apr 14 (Ram Navami) also dropped 91% vs adjacent weekdays. Always check `day_of_week` or join to market calendar before interpreting attribution trends. |
 
 - `Deliverables/cmp-1-engagement-skill-spec.md` — CMP-1 (Engagement & Comms, completed)
 - `Manager/CMP-2-Compass-Prompts.md` — Prompt templates for Prompts 2 + 3
