@@ -1226,3 +1226,187 @@ GROUP BY os_name, session_type, s7
 ORDER BY events DESC
 LIMIT 20;
 ```
+
+---
+
+## 12. Final validation — Prompt 3 (2026-04-19) [UNVERIFIED — pending review]
+
+*Queries run via live Compass MCP (Trino). Partition date: `current_date - interval '1' day` = 2026-04-18.*
+
+---
+
+### §12.1 Cross-skill join validations
+
+**Correction to §5:** `growth_user_master_ultimate` exists at `platform_iceberg.core_bgv.growth_user_master_ultimate` (114 cols, `dim_*`/`invest_*`/`activity_*` prefixed). Has `dim_user_status` (pre-built TTU/NTU/SignUp), `dim_mapping0` (source), AUM bands, per-product FID timestamps. Prefer over `growth_user_master` for analytics.
+
+**Join 1: PN ⨝ growth_user_master_ultimate** ✅ 10 rows | No type coercion
+
+| dim_mapping0 | total_pn | sent |
+|---|---|---|
+| performance | 24,223,539 | 17,347,457 |
+| organic | 15,426,964 | 10,653,344 |
+| referral | 3,219,608 | 2,273,111 |
+| web | 756,006 | 500,036 |
+| web-msite | 550,905 | 386,489 |
+| content | 352,683 | 247,452 |
+
+Join key: `pn.useraccountid = u.user_account_id` — both varchar, no coercion.
+
+**Join 2: Email ⨝ growth_user_master_ultimate** ✅ 3 rows | `dim_user_status` exactly 3 values
+
+| dim_user_status | emails_sent | open_rate_pct |
+|---|---|---|
+| Onboarded & Transacted (TTU) | 12,576,077 | 12.0% |
+| Onboarded & Non-Transacted (NTU) | 985,762 | 11.6% |
+| SignUp | 45,275 | **16.9%** |
+
+SignUp users have highest open rate — early-funnel curiosity.
+
+**Join 3: Session ⨝ PN (push attribution)** ✅ 2 rows
+
+| push_received | users | app_dau_rate | avg_sessions |
+|---|---|---|---|
+| got_push | 3,820,780 | 99.6% | 2.51 |
+| no_push | 2,508,612 | 98.4% | 2.53 |
+
+Push recipients have marginally higher app_dau rate (+1.2pp) but same avg sessions. Push increases open-app probability, not depth of engagement.
+
+---
+
+### §12.2 Stale detection
+
+| Table | Partition col | MAX partition | Days behind | Status |
+|---|---|---|---|---|
+| engagement_pn_narad_master | event_date | 2026-04-19 | 0 | ✅ fresh |
+| engagement_email_backend_master | event_date | 2026-04-18 | 1 | ✅ fresh |
+| engagement_sms_backend_master | event_date | **2026-05-01** | -12 (future!) | ⚠️ future data anomaly |
+| engagement_whatsapp_backend_master | event_date | 2026-04-18 | 1 | ✅ fresh |
+| engagement_user_session_daily | session_date | 2026-04-19 | 0 | ✅ fresh |
+| engagement_dau_indepth | session_date | 2026-04-19 | 0 | ✅ fresh |
+| engagement_session_indepth | session_date | 2026-04-19 | 0 | ✅ fresh |
+| engagement_app_fact | week | 2026-04-13 | 6 | ✅ expected (weekly, Sunday cadence) |
+| engagement_dnd_fact | date (no partition) | **2038-01-18** | -4382 days | ⚠️ Unix int32 sentinel |
+
+**SMS (2026-05-01):** 12 days in the future. Filter: `AND event_date <= current_date`.
+**DND (2038-01-18):** Near Unix int32 max (2^31−1). Filter: `AND date <= current_date`.
+
+---
+
+### §12.3 Hero SQL: engagement_pn_narad_master (5 queries, all ✅)
+
+**PN-Q1: CTR by campaign** ✅ 20 rows
+```sql
+SELECT campaignid, campaign_name, campaign_tag,
+       COUNT(*) AS total_attempts,
+       SUM(CASE WHEN status='SENT' THEN 1 ELSE 0 END) AS sent,
+       SUM(CASE WHEN click_time IS NOT NULL THEN 1 ELSE 0 END) AS clicked,
+       ROUND(SUM(CASE WHEN click_time IS NOT NULL THEN 1 ELSE 0 END)*100.0
+             /NULLIF(SUM(CASE WHEN status='SENT' THEN 1 ELSE 0 END),0),3) AS ctr_pct
+FROM platform_iceberg.core_bgv.engagement_pn_narad_master
+WHERE event_date = current_date - interval '1' day
+GROUP BY campaignid, campaign_name, campaign_tag
+ORDER BY sent DESC LIMIT 20
+```
+Top CTR: MIS NPS survey 4.3%, AMC Arbitrage Fund NFO 3.2%, Groww Charts NPS 2.6%
+Top volume: "17Apr'26 - Stock - Signup - Educational" 5.5M sent (CTR 0.2%), "Credit RPL Low Freq" 4.6M (1.1%)
+
+**PN-Q2: Delivery funnel by platform** ✅ 2 rows *(adapted: `slot` column doesn't exist)*
+```sql
+SELECT LOWER(os) AS platform, COUNT(*) AS total_attempts,
+       SUM(CASE WHEN status='SENT' THEN 1 ELSE 0 END) AS sent,
+       SUM(CASE WHEN status='OPTED_OUT' THEN 1 ELSE 0 END) AS opted_out,
+       SUM(CASE WHEN status='VENDOR_FAILURE' THEN 1 ELSE 0 END) AS vendor_failure,
+       SUM(CASE WHEN status='FREQUENCY_CAPPED' THEN 1 ELSE 0 END) AS freq_capped
+FROM platform_iceberg.core_bgv.engagement_pn_narad_master
+WHERE event_date = current_date - interval '1' day
+GROUP BY LOWER(os) ORDER BY total_attempts DESC
+```
+Android: 36.7M | iOS: 8.1M | iOS opted_out 1.7% vs Android 16.8% (OS-level permission difference)
+
+**PN-Q3: Clicked pushes by productentity** ✅ 5 rows
+```sql
+SELECT productentity, COUNT(*) AS clicked_pushes, COUNT(DISTINCT useraccountid) AS unique_clickers
+FROM platform_iceberg.core_bgv.engagement_pn_narad_master
+WHERE event_date = current_date - interval '1' day
+  AND status = 'SENT' AND click_time IS NOT NULL
+GROUP BY productentity ORDER BY clicked_pushes DESC LIMIT 20
+```
+Personal Loans: 100K, NFO (trailing space!): 43K, Stocks: 26.6K, MF: 16.7K, F&O: 31
+
+**PN-Q4: Heavy push users (>5 attempts/day)** ✅ 1 row
+```sql
+SELECT COUNT(*) AS heavy_push_users, MAX(daily_pushes) AS max_for_one_user,
+       ROUND(AVG(daily_pushes),1) AS avg_pushes_among_heavy
+FROM (
+  SELECT useraccountid, COUNT(*) AS daily_pushes
+  FROM platform_iceberg.core_bgv.engagement_pn_narad_master
+  WHERE event_date = current_date - interval '1' day
+  GROUP BY useraccountid HAVING COUNT(*) > 5
+) t
+```
+7,811 heavy users | Max 10 pushes/day | Avg 6.0 among them
+
+**PN-Q5: Full status funnel** ✅ 7 rows
+```sql
+SELECT status, COUNT(*) AS sends, ROUND(COUNT(*)*100.0/SUM(COUNT(*)) OVER(),2) AS pct
+FROM platform_iceberg.core_bgv.engagement_pn_narad_master
+WHERE event_date = current_date - interval '1' day
+GROUP BY status ORDER BY sends DESC
+```
+SENT 70.5%, OPTED_OUT 14.1%, VENDOR_FAILURE 8.8%, FREQUENCY_CAPPED 6.5%, DND 0.07%, EXPIRED 0.03%, INTERNAL_SERVICE_FAILURE <0.01%
+
+---
+
+### §12.4 Hero SQL: engagement_email_backend_master (5 queries, all ✅)
+
+**Email-Q1: Open rate by template (event_name)** ✅ 20 rows
+```sql
+SELECT event_name, event_group, COUNT(*) AS volume,
+       SUM(deliver_flag) AS delivered, SUM(open_flag) AS opened,
+       ROUND(SUM(open_flag)*100.0/NULLIF(SUM(deliver_flag),0),2) AS open_rate_pct
+FROM platform_iceberg.core_bgv.engagement_email_backend_master
+WHERE event_date = current_date - interval '1' day
+GROUP BY event_name, event_group ORDER BY volume DESC LIMIT 20
+```
+Highest open: MF_Redeem_OTP 35.5%, git_mf_redeem_processing_bank_v2 24.2%, MF_Sip_First_OTP 23.1%
+Highest volume: raa_withdraw_complete 4.1M (10.9%), git_gb_raa_without_balance 4.0M (12.4%)
+
+**Email-Q2: Full delivery funnel** ✅ 1 row — delivery 94.8%, open 12.0%, CTO 0.8%, bounced 440K
+
+**Email-Q3: By event_group** ✅ 20 rows *(adapted: no sender_domain column)*
+```sql
+SELECT event_group, COUNT(*) AS volume, SUM(deliver_flag) AS delivered,
+       SUM(open_flag) AS opened,
+       ROUND(SUM(open_flag)*100.0/NULLIF(SUM(deliver_flag),0),2) AS open_rate_pct
+FROM platform_iceberg.core_bgv.engagement_email_backend_master
+WHERE event_date = current_date - interval '1' day
+GROUP BY event_group ORDER BY volume DESC LIMIT 20
+```
+OTP groups dominate open rate: general_otp_group 54.8%, stocks_insights 58.4%, mf_otp 26.8%
+
+**Email-Q4: 7-day open rate trend** ✅ 7 rows — runs ~60s, no timeout
+```sql
+SELECT event_date, SUM(CASE WHEN deliver_flag=1 THEN 1 ELSE 0 END) AS delivered,
+       SUM(open_flag) AS opened,
+       ROUND(SUM(open_flag)*100.0/NULLIF(SUM(deliver_flag),0),2) AS open_rate_pct
+FROM platform_iceberg.core_bgv.engagement_email_backend_master
+WHERE event_date BETWEEN current_date - interval '7' day AND current_date - interval '1' day
+GROUP BY event_date ORDER BY event_date
+```
+Open rate trend: 19.3% → 18.4% → 19.2% → 18.6% → 17.1% → 15.2% → **12.0%** (Apr 12→18)
+Volume surge on Apr 18 (12.9M vs 2.6-8M earlier) explains the rate drop — more bulk/transactional email.
+
+**Email-Q5: By user status (join to GUM ultimate)** ✅ 3 rows — same as Join 2 above
+
+---
+
+### §12.5 Additional guardrails (G18–G23)
+
+| ID | Table | Guardrail |
+|---|---|---|
+| G18 | pn_narad_master | iOS OPTED_OUT (1.7%) ≠ Android (16.8%) — iOS permission is OS-level binary; cannot compare |
+| G19 | pn_narad_master | `productentity` trailing space bug: `"NFO "` — use `TRIM(productentity)` or `LIKE 'NFO%'` |
+| G20 | sms_backend_master | MAX(event_date) = 2026-05-01 — future data exists; add `AND event_date <= current_date` |
+| G21 | dnd_fact | MAX(date) = 2038-01-18 (Unix int32 sentinel) — add `AND date <= current_date` |
+| G22 | All cross-skill joins | Use `growth_user_master_ultimate` (not bare `growth_user_master`) — has `dim_user_status` pre-built |
+| G23 | email_backend_master | 7-day BETWEEN on event_date runs in ~60s — safe; do not use >14 days |
