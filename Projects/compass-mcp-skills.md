@@ -8,6 +8,7 @@ deliverable: "Enhanced and new Compass MCP skill documents for all Growth domain
 sources:
   - "[[raw/claude.ai-Scoping a context engine and compass MCP integration.pdf]]"
 ai-context: "[[AI-Sessions/claude-scoping-content-engine-compass-2026-04-07]]"
+execution-log: "2026-04-18/19: CMP-1 (Engagement & Comms) fully completed — schemas, live enum validation, 45 SQL examples, cross-skill joins all confirmed via Compass MCP. See Deliverables/cmp-1-engagement-skill-spec.md."
 ---
 
 # Project: Compass MCP Skills
@@ -47,24 +48,26 @@ Each skill document includes:
 
 ## Current State: 16 Skills with Depth Assessment
 
-| # | Skill | Depth | Enhancement Opportunity |
-|---|---|---|---|
-| 1 | Stocks & Trading | Deep | Add column-level docs, more tested SQL |
-| 2 | F&O Analytics | Deep | Future-date issue documented; add more SQL |
-| 3 | Mutual Funds | Deep | No explicit guardrails — add them |
-| 4 | User Master & Growth | Deep | Add cross-skill join patterns |
-| 5 | User Events | Deep (unique) | Pinot + Iceberg, sampling documented |
-| 6 | Onboarding | Deep | Stale tables well-flagged |
-| 7 | UPI Payments | Medium | 2 stale tables; rolling window limitations |
-| 8 | Engagement & Comms | Deep | Most relevant to Content Engine |
-| 9 | MTF & Pledge | Medium | Stale `mtf_transactions_v2` flagged |
-| 10 | Commodities | Medium | No partition on `commodity_order_master` |
-| 11 | 915 Trading | Medium | Data starts June 2025 |
-| 12 | Help & Support | Medium | 1 BROKEN table, 2 stale |
-| 13 | Context Push | **Minimal** | Major enhancement opportunity |
-| 14 | User Financial Health | **Minimal** | Major enhancement opportunity |
-| 15 | Datahub Navigation | **Minimal** | Meta-skill, may not need deep enhancement |
-| 16 | MF Extended | **Minimal** | Major enhancement opportunity |
+| # | Skill | Depth | Status | Enhancement Opportunity |
+|---|---|---|---|---|
+| 1 | Stocks & Trading | Deep | ⬜ todo | Add column-level docs, more tested SQL |
+| 2 | F&O Analytics | Deep | ⬜ todo | Future-date issue documented; add more SQL |
+| 3 | Mutual Funds | Deep | ⬜ todo | No explicit guardrails — add them |
+| 4 | User Master & Growth | Deep | ⬜ todo | Add cross-skill join patterns |
+| 5 | User Events | Deep (unique) | ⬜ todo | Pinot + Iceberg, sampling documented |
+| 6 | Onboarding | Deep | ⬜ todo | Stale tables well-flagged |
+| 7 | UPI Payments | Medium | ⬜ todo | 2 stale tables; rolling window limitations |
+| 8 | Engagement & Comms | Deep | **✅ done (CMP-1)** | All 9 tables fully cataloged, 45 SQL examples, 17 guardrails, cross-skill joins |
+| 9 | MTF & Pledge | Medium | ⬜ todo | Stale `mtf_transactions_v2` flagged |
+| 10 | Commodities | Medium | ⬜ todo | No partition on `commodity_order_master` |
+| 11 | 915 Trading | Medium | ⬜ todo | Data starts June 2025 |
+| 12 | Help & Support | Medium | ⬜ todo | 1 BROKEN table, 2 stale |
+| 13 | Context Push | **Minimal** | ⬜ todo | Major enhancement opportunity |
+| 14 | User Financial Health | **Minimal** | ⬜ todo | Major enhancement opportunity |
+| 15 | Datahub Navigation | **Minimal** | ⬜ todo | Meta-skill, may not need deep enhancement |
+| 16 | MF Extended | **Minimal** | ⬜ todo | Major enhancement opportunity |
+
+**CMP-1 completion summary (2026-04-18/19):** 9 tables cataloged, 17 guardrails, 45 SQL examples (Q1 live-confirmed), 2 cross-skill joins live-confirmed. Spec: `Deliverables/cmp-1-engagement-skill-spec.md`.
 
 ## Priority Tiers
 1. **Tier 1 (foundational)**: Engagement & Comms, User Master, User Events — these directly feed the Content Engine
